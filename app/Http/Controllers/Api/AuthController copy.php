@@ -11,9 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Tymon\JWTAuth\Facades\JWTAuth;
-
 use Laravel\Socialite\Facades\Socialite;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /**
  * @group Admin Dashboard
@@ -22,41 +21,40 @@ use Laravel\Socialite\Facades\Socialite;
 class AuthController extends Controller
 {
 
-
     public function register(Request $request)
-        {
-            $validator = Validator::make($request->all(), [
-                'name'     => 'required|string|max:255',
-                'email'    => 'required|email|unique:users,email',
-                'password' => 'required|min:6|confirmed',
-                'terms'    => 'required|accepted',
-            ], [
-                'terms.accepted' => 'You must accept Terms & Conditions'
-            ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
+            'password' => 'required|min:6|confirmed',
+            'terms'    => 'required|accepted',
+        ], [
+            'terms.accepted' => 'You must accept Terms & Conditions',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors'  => $validator->errors()->first(),
-                ], 422);
-            }
-
-            $user = User::create([
-                'name'            => $request->name,
-                'email'           => $request->email,
-                'password'        => Hash::make($request->password),
-                'role'            => 'user',
-                'terms_accepted'  => 1, // optional
-            ]);
-
-            $token = JWTAuth::fromUser($user);
-
+        if ($validator->fails()) {
             return response()->json([
-                'success' => true,
-                'token'   => $token,
-                'user'    => $user,
-            ]);
+                'success' => false,
+                'errors'  => $validator->errors()->first(),
+            ], 422);
         }
+
+        $user = User::create([
+            'name'           => $request->name,
+            'email'          => $request->email,
+            'password'       => Hash::make($request->password),
+            'role'           => 'user',
+            'terms_accepted' => 1, // optional
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        return response()->json([
+            'success' => true,
+            'token'   => $token,
+            'user'    => $user,
+        ]);
+    }
     // User Login
     public function login(Request $request)
     {
@@ -80,12 +78,12 @@ class AuthController extends Controller
         $user = User::where($loginField, $request->login)->first();
 
         // User not found
-       if (!in_array($user->role, ['admin', 'accountent'])) {
-    return response()->json([
-        'success' => false,
-        'message' => 'Access denied. Admin & Accountant only.',
-    ], 403);
-}
+        if (! in_array($user->role, ['admin', 'accountent'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Admin & Accountant only.',
+            ], 403);
+        }
 
                                      // ❌ Block non-admins explicitly
         if ($user->role != 'user') { // 2 = admin
@@ -94,9 +92,6 @@ class AuthController extends Controller
                 'message' => 'Access denied. User only.',
             ], 403);
         }
-
-
-
 
         // Password check
         if (! Hash::check($request->password, $user->password)) {
@@ -117,9 +112,7 @@ class AuthController extends Controller
         ]);
     }
 
-
-
-       public function manager_loign(Request $request)
+    public function managerLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'login'    => 'required|string', // email OR phone
@@ -148,13 +141,13 @@ class AuthController extends Controller
             ], 404);
         }
 
-                                     // ❌ Block non-admins explicitly
+        // ❌ Block non-admins explicitly
         if ($user->role !== 'manager') {
-    return response()->json([
-        'success' => false,
-        'message' => 'Access denied. Manager only.',
-    ], 403);
-}
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Manager only.',
+            ], 403);
+        }
 
         // Password check
         if (! Hash::check($request->password, $user->password)) {
@@ -175,76 +168,68 @@ class AuthController extends Controller
         ]);
     }
 
-
-
-
-public function redirectToGoogle()
-{
-    return Socialite::driver('google')->stateless()->redirect();
-}
-
-public function handleGoogleCallback1()
-{
-    $googleUser = Socialite::driver('google')->stateless()->user();
-
-    // 🔍 Check user
-    $user = User::where('email', $googleUser->getEmail())->first();
-
-    if (!$user) {
-        $user = User::create([
-            'name' => $googleUser->getName(),
-            'email' => $googleUser->getEmail(),
-            'password' => bcrypt(Str::random(10)),
-            'role' => 'user',
-        ]);
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
-    // 🔐 JWT Token
-    $token = JWTAuth::fromUser($user);
+    public function handleGoogleCallback1()
+    {
+        $googleUser = Socialite::driver('google')->stateless()->user();
 
+        // 🔍 Check user
+        $user = User::where('email', $googleUser->getEmail())->first();
 
+        if (! $user) {
+            $user = User::create([
+                'name'     => $googleUser->getName(),
+                'email'    => $googleUser->getEmail(),
+                'password' => bcrypt(Str::random(10)),
+                'role'     => 'user',
+            ]);
+        }
 
+        // 🔐 JWT Token
+        $token = JWTAuth::fromUser($user);
 
-    // 👉 Redirect to frontend
-    return redirect("http://localhost:5173/auth-success?token={$token}");
-}
-
-
-
-public function handleGoogleCallback()
-{
-    $googleUser = Socialite::driver('google')->stateless()->user();
-
-    // 🔍 Check user
-    $user = User::where('email', $googleUser->getEmail())->first();
-
-    if (!$user) {
-        $user = User::create([
-            'name' => $googleUser->getName(),
-            'email' => $googleUser->getEmail(),
-            'password' => bcrypt(Str::random(10)),
-            'role' => 'user', // 🔥 better naming
-        ]);
+        // 👉 Redirect to frontend
+        return redirect("http://localhost:5173/auth-success?token={$token}");
     }
 
-    // 🔐 JWT Token
-    $token = JWTAuth::fromUser($user);
+    public function handleGoogleCallback()
+    {
+        $googleUser = Socialite::driver('google')->stateless()->user();
 
-    // 🔥 SEND TOKEN + USER
-    $data = urlencode(json_encode([
-        'token' => $token,
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->role,
-        ]
-    ]));
+        // 🔍 Check user
+        $user = User::where('email', $googleUser->getEmail())->first();
 
-    $frontend = config('services.frontend.url');
+        if (! $user) {
+            $user = User::create([
+                'name'     => $googleUser->getName(),
+                'email'    => $googleUser->getEmail(),
+                'password' => bcrypt(Str::random(10)),
+                'role'     => 'user', // 🔥 better naming
+            ]);
+        }
 
-    return redirect("{$frontend}/auth-success?data={$data}");
-}
+        // 🔐 JWT Token
+        $token = JWTAuth::fromUser($user);
+
+        // 🔥 SEND TOKEN + USER
+        $data = urlencode(json_encode([
+            'token' => $token,
+            'user'  => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
+            ],
+        ]));
+
+        $frontend = config('services.frontend.url');
+
+        return redirect("{$frontend}/auth-success?data={$data}");
+    }
 
     public function sample()
     {
@@ -302,7 +287,6 @@ public function handleGoogleCallback()
     }
 
     // User Registration
-
 
     public function admin_register(Request $request)
     {
@@ -450,167 +434,164 @@ public function handleGoogleCallback()
     }
 
     public function admin_login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'username' => 'required|string',
-        'password' => 'required|string',
-    ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'errors'  => $validator->errors()->first(),
-        ], 422);
-    }
-
-    $loginField = filter_var($request->username, FILTER_VALIDATE_EMAIL)
-        ? 'email'
-        : 'phone';
-
-    // 👇 Load company also
-    $user = User::with('company')
-        ->where($loginField, $request->username)
-        ->first();
-
-    if (! $user) {
-        return response()->json([
-            'success' => false,
-            'message' => 'User not found',
-        ], 404);
-    }
-
-    // ✅ Allow only admin & employer
-    if (! in_array($user->role, ['admin'])) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Access denied',
-        ], 403);
-    }
-
-    // 🔥 NEW: Check company approval for employer
-    if ($user->role === 'employeer') {
-
-        if (! $user->company) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Company not found',
+                'errors'  => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $loginField = filter_var($request->username, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'phone';
+
+        // 👇 Load company also
+        $user = User::with('company')
+            ->where($loginField, $request->username)
+            ->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
             ], 404);
         }
 
-        if ($user->company->status !== 'approved') {
+        // ✅ Allow only admin & employer
+        if (! in_array($user->role, ['admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your company is not approved yet',
+                'message' => 'Access denied',
             ], 403);
         }
-    }
 
-    // 🔐 Password check
-    if (! Hash::check($request->password, $user->password)) {
+        // 🔥 NEW: Check company approval for employer
+        if ($user->role === 'employeer') {
+
+            if (! $user->company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Company not found',
+                ], 404);
+            }
+
+            if ($user->company->status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your company is not approved yet',
+                ], 403);
+            }
+        }
+
+        // 🔐 Password check
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ], 401);
+        }
+
+        // 🎟 JWT Token
+        $token = JWTAuth::fromUser($user);
+
         return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials',
-        ], 401);
+            'success'    => true,
+            'token'      => $token,
+            'token_type' => 'Bearer',
+            'user'       => $user,
+        ]);
     }
-
-    // 🎟 JWT Token
-    $token = JWTAuth::fromUser($user);
-
-    return response()->json([
-        'success'    => true,
-        'token'      => $token,
-        'token_type' => 'Bearer',
-        'user'       => $user,
-    ]);
-}
-
 
     public function company_login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'username' => 'required|string',
-        'password' => 'required|string',
-    ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors'  => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $loginField = filter_var($request->username, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'phone';
+
+        // 👇 Load company also
+        $user = User::with('company')
+            ->where($loginField, $request->username)
+            ->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // ✅ Allow only admin & employer
+        if (! in_array($user->role, ['employeer'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied',
+            ], 403);
+        }
+
+        // 🔥 NEW: Check company approval for employer
+
+        if ($user->role === 'employeer') {
+
+            if (! $user->company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Company not found',
+                ], 404);
+            }
+
+            // ✅ Check rejected FIRST
+            if ($user->company->status === 'rejected') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your company is rejected',
+                ], 403);
+            }
+
+            // ✅ Then check pending / not approved
+            if ($user->company->status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your company is not approved yet',
+                ], 403);
+            }
+        }
+
+        // 🔐 Password check
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ], 401);
+        }
+
+        // 🎟 JWT Token
+        $token = JWTAuth::fromUser($user);
+
         return response()->json([
-            'success' => false,
-            'errors'  => $validator->errors()->first(),
-        ], 422);
+            'success'    => true,
+            'token'      => $token,
+            'token_type' => 'Bearer',
+            'user'       => $user,
+        ]);
     }
-
-    $loginField = filter_var($request->username, FILTER_VALIDATE_EMAIL)
-        ? 'email'
-        : 'phone';
-
-    // 👇 Load company also
-    $user = User::with('company')
-        ->where($loginField, $request->username)
-        ->first();
-
-    if (! $user) {
-        return response()->json([
-            'success' => false,
-            'message' => 'User not found',
-        ], 404);
-    }
-
-    // ✅ Allow only admin & employer
-    if (! in_array($user->role, ['employeer'])) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Access denied',
-        ], 403);
-    }
-
-    // 🔥 NEW: Check company approval for employer
-
-    if ($user->role === 'employeer') {
-
-    if (! $user->company) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Company not found',
-        ], 404);
-    }
-
-    // ✅ Check rejected FIRST
-    if ($user->company->status === 'rejected') {
-        return response()->json([
-            'success' => false,
-            'message' => 'Your company is rejected',
-        ], 403);
-    }
-
-    // ✅ Then check pending / not approved
-    if ($user->company->status !== 'approved') {
-        return response()->json([
-            'success' => false,
-            'message' => 'Your company is not approved yet',
-        ], 403);
-    }
-}
-
-
-
-    // 🔐 Password check
-    if (! Hash::check($request->password, $user->password)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials',
-        ], 401);
-    }
-
-    // 🎟 JWT Token
-    $token = JWTAuth::fromUser($user);
-
-    return response()->json([
-        'success'    => true,
-        'token'      => $token,
-        'token_type' => 'Bearer',
-        'user'       => $user,
-    ]);
-}
 
     public function super_admin_login(Request $request)
     {

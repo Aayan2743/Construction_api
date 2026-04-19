@@ -116,4 +116,9 @@ public function candidate()
     return $this->hasOne(\App\Models\Candidate::class);
 }
 
+public function projects()
+{
+    return $this->hasMany(Project::class, 'manager_id');
+}
+
 }

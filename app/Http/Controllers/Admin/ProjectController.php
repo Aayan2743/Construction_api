@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Project;
+use Illuminate\Support\Facades\Auth;
 
 class ProjectController extends Controller
 {
@@ -150,4 +151,42 @@ class ProjectController extends Controller
             'message' => 'Project deleted'
         ]);
     }
+
+
+        // Mobile Api
+
+    public function myProjects()
+{
+    $userId = Auth::id(); // current logged in user
+
+    $projects = Project::where('manager_id', $userId)->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $projects
+    ]);
+}
+
+public function myProject(Request $request, $id)
+{
+    $user = $request->user();
+
+    $project = Project::with('manager:id,name')
+        ->where('id', $id)
+        ->where('manager_id', $user->id) // 🔥 important
+        ->first();
+
+    if (!$project) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Project not found or unauthorized'
+        ], 404);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => $project
+    ]);
+}
+
 }

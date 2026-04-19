@@ -114,6 +114,62 @@ class AuthController extends Controller
         ]);
     }
 
+     public function managerLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'login'    => 'required|string', // email OR phone
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors'  => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $loginField = filter_var($request->login, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'phone';
+
+        // Fetch user manually
+        $user = User::where($loginField, $request->login)->first();
+
+        // User not found
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // ❌ Block non-admins explicitly
+        if ($user->role !== 'manager') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Manager only.',
+            ], 403);
+        }
+
+        // Password check
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ], 422);
+        }
+
+        // Generate JWT token manually
+        $token = JWTAuth::fromUser($user);
+
+        return response()->json([
+            'success'    => true,
+            'token'      => $token,
+            'token_type' => 'Bearer',
+            'user'       => $user,
+        ]);
+    }
+
 
 
 

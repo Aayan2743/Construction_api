@@ -136,4 +136,46 @@ class VendorController extends Controller
             'message' => 'Vendor deleted'
         ]);
     }
+
+    // all vendor for drop down
+    public function list_all(Request $request)
+    {
+        $search = $request->get('search');
+
+        $query = Vendor::query();
+
+        // 🔍 Search
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%$search%")
+                ->orWhere('contact', 'LIKE', "%$search%");
+            });
+        }
+
+        $vendors = $query->latest()->get(); // ✅ no pagination
+
+        return response()->json([
+            'success' => true,
+            'data' => $vendors
+        ]);
+    }
+
+      // all vendor for drop down itens
+    public function vendorsByType(Request $request)
+    {
+        $type = $request->get('type'); // machinery / material / labour
+
+        $vendors = Vendor::query();
+
+        if ($type) {
+            $vendors->whereJsonContains('type', $type); // 🔥 key line
+        }
+
+        $data = $vendors->latest()->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
 }

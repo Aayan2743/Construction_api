@@ -5,17 +5,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Attendance extends Model
 {
-    protected $fillable = [
-        'user_id',
+   protected $fillable = [
+        'labour_id',
         'date',
-        'status',
-        'in_time',
-        'out_time',
-        'ot_amount',
+        'is_present',
+        'added_by'
     ];
 
-    public function user()
+    public function labour()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Labour::class);
     }
 }
