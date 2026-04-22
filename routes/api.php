@@ -1,15 +1,15 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\ProjectController;
-
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\LabourReportController;
-use App\Http\Controllers\ItemController;
-use App\Http\Controllers\EquipmentEntryController;
-use App\Http\Controllers\mobile\LabourController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\EquipmentEntryController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LabourReportController;
+use App\Http\Controllers\mobile\LabourController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -44,6 +44,8 @@ Route::prefix('admin')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::get('/show/{id}', [ProjectController::class, 'show']);
         Route::post('/update/{id}', [ProjectController::class, 'update']);
         Route::delete('/delete/{id}', [ProjectController::class, 'destroy']);
+        Route::get('/projects-by-manager/{id}', [ProjectController::class, 'getProjectsByManager']);
+
     });
 
     Route::prefix('vendors')->group(function () {
@@ -55,46 +57,43 @@ Route::prefix('admin')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::delete('/delete/{id}', [VendorController::class, 'destroy']);
     });
 
-});
+    Route::prefix('accounts')->group(function () {
+        Route::post('/allocate', [AccountController::class, 'storeAllocation']);
+    });
 
+});
 
 Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
 
-      Route::get('/my-projects', [ProjectController::class, 'myProjects']);
-      Route::get('/my-project/{id}', [ProjectController::class, 'myProject'])->name('my-project-by-id');
+    Route::get('/my-projects', [ProjectController::class, 'myProjects']);
+    Route::get('/my-project/{id}', [ProjectController::class, 'myProject'])->name('my-project-by-id');
 
     Route::prefix('labours')->group(function () {
 
-          Route::get('/list', [LabourController::class, 'index']);
-            Route::post('/add', [LabourController::class, 'store']);
-            Route::get('/show/{id}', [LabourController::class, 'show']);
-            Route::post('/update/{id}', [LabourController::class, 'update']);
-            Route::delete('/delete/{id}', [LabourController::class, 'destroy']);
+        Route::get('/list', [LabourController::class, 'index']);
+        Route::post('/add', [LabourController::class, 'store']);
+        Route::get('/show/{id}', [LabourController::class, 'show']);
+        Route::post('/update/{id}', [LabourController::class, 'update']);
+        Route::delete('/delete/{id}', [LabourController::class, 'destroy']);
     });
 
-        Route::prefix('labours')->group(function () {
-            Route::post('/attendance/mark', [AttendanceController::class, 'markAttendance']);
-            Route::get('/attendance/today', [AttendanceController::class, 'todayAttendance']);
+    Route::prefix('labours')->group(function () {
+        Route::post('/attendance/mark', [AttendanceController::class, 'markAttendance']);
+        Route::get('/attendance/today', [AttendanceController::class, 'todayAttendance']);
 
-            Route::post('/reports', [LabourReportController::class, 'store']);
-            Route::get('/reports', [LabourReportController::class, 'index']);
-            Route::post('/update-reports/{id}', [LabourReportController::class, 'update']);
+        Route::post('/reports', [LabourReportController::class, 'store']);
+        Route::get('/reports', [LabourReportController::class, 'index']);
+        Route::post('/update-reports/{id}', [LabourReportController::class, 'update']);
 
+    });
 
-        });
-
-        
-
-
-           Route::get('/items', [ItemController::class, 'index']);
-           Route::get('/vendors-by-type', [VendorController::class, 'vendorsByType']);
-           Route::get('get-machinery', [ItemController::class, 'get_machinery']);
-           Route::get('get-material', [ItemController::class, 'get_material']);
-            Route::post('/add-items', [ItemController::class, 'store']);
-            Route::post('/update-items/{id}', [ItemController::class, 'update']);
-            Route::delete('/items/{id}', [ItemController::class, 'destroy']);
-
-
+    Route::get('/items', [ItemController::class, 'index']);
+    Route::get('/vendors-by-type', [VendorController::class, 'vendorsByType']);
+    Route::get('get-machinery', [ItemController::class, 'get_machinery']);
+    Route::get('get-material', [ItemController::class, 'get_material']);
+    Route::post('/add-items', [ItemController::class, 'store']);
+    Route::post('/update-items/{id}', [ItemController::class, 'update']);
+    Route::delete('/items/{id}', [ItemController::class, 'destroy']);
 
     Route::prefix('equipment-entries')->group(function () {
         Route::get('/', [EquipmentEntryController::class, 'index']);
@@ -104,13 +103,5 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::delete('/delete/{id}', [EquipmentEntryController::class, 'destroy']);
 
     });
-              
-
-
-  
-     
 
 });
-
-
-
