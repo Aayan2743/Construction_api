@@ -9,6 +9,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EquipmentEntryController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LabourReportController;
+use App\Http\Controllers\MaterialEntryController;
 use App\Http\Controllers\mobile\LabourController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +83,9 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::get('/show/{id}', [LabourController::class, 'show']);
         Route::post('/update/{id}', [LabourController::class, 'update']);
         Route::delete('/delete/{id}', [LabourController::class, 'destroy']);
+        Route::post('/{id}/wages', [LabourController::class, 'addWage']);
+        Route::get('/{id}/wages', [LabourController::class, 'wageDetails']);
+        Route::get('/{id}/history', [LabourController::class, 'history']);
     });
 
     Route::prefix('labours')->group(function () {
@@ -108,7 +112,17 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::get('/show/{id}', [EquipmentEntryController::class, 'show']);
         Route::post('/update/{id}', [EquipmentEntryController::class, 'update']);
         Route::delete('/delete/{id}', [EquipmentEntryController::class, 'destroy']);
+        Route::get('/{id}/history', [EquipmentEntryController::class, 'history']);
 
+    });
+
+    Route::prefix('material-entries')->group(function () {
+        Route::get('/', [MaterialEntryController::class, 'index']);
+        Route::post('/add', [MaterialEntryController::class, 'store']);
+        Route::get('/show/{id}', [MaterialEntryController::class, 'show']);
+        Route::post('/update/{id}', [MaterialEntryController::class, 'update']);
+        Route::delete('/delete/{id}', [MaterialEntryController::class, 'destroy']);
+        Route::get('/{id}/history', [MaterialEntryController::class, 'history']);
     });
 
 });

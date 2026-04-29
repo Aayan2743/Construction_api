@@ -26,4 +26,9 @@ class EquipmentEntry extends Model
     {
         return $this->belongsTo(Vendor::class);
     }
+
+    public function histories()
+    {
+        return $this->hasMany(EquipmentEntryHistory::class, 'equipment_entry_id');
+    }
 }

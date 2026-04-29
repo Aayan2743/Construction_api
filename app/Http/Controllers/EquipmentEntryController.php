@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\EquipmentEntry;
+use App\Models\EquipmentEntryHistory;
 
 class EquipmentEntryController extends Controller
 {
@@ -99,7 +100,9 @@ public function show($id)
 
 public function update(Request $request, $id)
 {
-    $entry = EquipmentEntry::find($id);
+    $entry = EquipmentEntry::where('id', $id)
+        ->where('added_by', $request->user()->id)
+        ->first();
 
     if (!$entry) {
         return response()->json([
@@ -108,10 +111,32 @@ public function update(Request $request, $id)
         ], 404);
     }
 
+    $validator = Validator::make($request->all(), [
+        'equipment_id' => 'required|exists:items,id',
+        'vendor_id' => 'required|exists:vendors,id',
+        'start_time' => 'required',
+        'end_time' => 'required',
+        'date' => 'required|date',
+        'work_done' => 'required|string',
+        'remarks' => 'required|string|max:500',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => $validator->errors()->first()
+        ], 422);
+    }
+
     $start = strtotime($request->start_time);
     $end   = strtotime($request->end_time);
 
     $hours = ($end - $start) / 3600;
+
+    $before = $entry->only([
+        'equipment_id', 'vendor_id', 'start_time', 'end_time',
+        'total_hours', 'work_done', 'date',
+    ]);
 
     $entry->update([
         'equipment_id' => $request->equipment_id,
@@ -123,9 +148,56 @@ public function update(Request $request, $id)
         'date' => $request->date,
     ]);
 
+    $entry->refresh();
+    $after = $entry->only([
+        'equipment_id', 'vendor_id', 'start_time', 'end_time',
+        'total_hours', 'work_done', 'date',
+    ]);
+
+    $changes = [];
+    foreach ($after as $key => $value) {
+        if (($before[$key] ?? null) !== $value) {
+            $changes[$key] = [
+                'old' => $before[$key] ?? null,
+                'new' => $value,
+            ];
+        }
+    }
+
+    EquipmentEntryHistory::create([
+        'equipment_entry_id' => $entry->id,
+        'user_id' => $request->user()->id,
+        'remarks' => $request->remarks,
+        'changes' => $changes ?: null,
+    ]);
+
     return response()->json([
         'success' => true,
         'data' => $entry
+    ]);
+}
+
+public function history(Request $request, $id)
+{
+    $entry = EquipmentEntry::where('id', $id)
+        ->where('added_by', $request->user()->id)
+        ->first();
+
+    if (!$entry) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Entry not found'
+        ], 404);
+    }
+
+    $items = EquipmentEntryHistory::with('user:id,name')
+        ->where('equipment_entry_id', $entry->id)
+        ->latest()
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $items
     ]);
 }
 

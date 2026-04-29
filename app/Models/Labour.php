@@ -12,6 +12,7 @@ class Labour extends Model
         'gender',
         'vendor_id',
         'phone',
+        'daily_wage',
         'added_by',
         'profile_pic'
     ];
@@ -25,6 +26,23 @@ class Labour extends Model
 {
     return $this->belongsTo(Vendor::class);
 }
+
+    public function wages()
+    {
+        return $this->hasMany(LabourWage::class);
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(LabourHistory::class);
+    }
+
+    public function currentWage()
+    {
+        return $this->hasOne(LabourWage::class)
+            ->whereNull('effective_to')
+            ->latest('effective_from');
+    }
 
 
 
