@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +10,8 @@ class Project extends Model
         'manager_id',
         'location',
         'start_date',
-        'status'
+        'status',
+        'budget',
     ];
 
     public function manager()

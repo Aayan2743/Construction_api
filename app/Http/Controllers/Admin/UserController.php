@@ -15,11 +15,14 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'phone'    => 'nullable|digits:10',
-            'role'     => 'required|in:manager,supervisor,accountent',
+            'role'     => 'required|in:admin,manager,supervisor,accountent',
             // 'project' => 'required|string',
 
             'password' => 'required|min:6',
             'status'   => 'required|in:0,1',
+        ], [
+            'role.required' => 'Role is required.',
+            'role.in'       => 'The role must be one of: admin, manager, supervisor, accountent.',
         ]);
 
         // ❌ Validation fail
@@ -45,6 +48,134 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User created successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    // ✅ UPDATE
+    public function update(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email,' . $id,
+            'phone'    => 'nullable|digits:10',
+            'role'     => 'required|in:admin,manager,supervisor,accountent',
+            'status'   => 'required|in:0,1',
+            'password' => 'nullable|min:6',
+        ], [
+            'role.required' => 'Role is required.',
+            'role.in'       => 'The role must be one of: admin, manager, supervisor, accountent.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $data = $request->only(['name', 'email', 'phone', 'role', 'status']);
+
+        // Update password only when provided
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User updated successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    // ✅ DELETE
+    public function destroy($id)
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully',
+        ]);
+    }
+
+    // ✅ UPDATE LOGGED-IN USER PROFILE (for your profile UI)
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name'   => 'required|string|max:255',
+            'email'  => 'required|email|unique:users,email,' . $user->id,
+            'phone'  => 'nullable|digits:10',
+            // 'role'   => 'required|in:admin,manager,supervisor,accountent',
+            // 'status' => 'sometimes|in:0,1',
+            'password' => 'nullable|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $data = $request->only(['name', 'email', 'phone']);
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    // ✅ GET LOGGED-IN USER PROFILE (for your profile UI)
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        return response()->json([
+            'success' => true,
             'data'    => $user,
         ]);
     }

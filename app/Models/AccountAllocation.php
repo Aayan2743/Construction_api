@@ -12,5 +12,16 @@ class AccountAllocation extends Model
         'role',
         'project_id',
         'amount',
+        'remarks',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
 }

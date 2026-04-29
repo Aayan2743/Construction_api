@@ -34,6 +34,10 @@ Route::prefix('admin')->middleware(['api', 'jwt.auth'])->group(function () {
 
     Route::prefix('users')->group(function () {
         Route::post('/create', [UserController::class, 'store'])->name('users.create');
+        Route::post('/update/{id}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/delete/{id}', [UserController::class, 'destroy'])->name('users.delete');
+        Route::get('/profile', [UserController::class, 'getProfile'])->name('users.profile');
+        Route::post('/update-profile', [UserController::class, 'updateProfile'])->name('users.update_profile');
         Route::get('/', [UserController::class, 'index'])->name('users.list');
         Route::get('/list-all-users', [UserController::class, 'get_all'])->name('users.list_all');
     });
@@ -59,6 +63,9 @@ Route::prefix('admin')->middleware(['api', 'jwt.auth'])->group(function () {
 
     Route::prefix('accounts')->group(function () {
         Route::post('/allocate', [AccountController::class, 'storeAllocation']);
+        Route::get('/get-allocations', [AccountController::class, 'index']);
+        Route::delete('/delete-allocation/{id}', [AccountController::class, 'destroy']);
+        Route::post('/update-allocations/{id}', [AccountController::class, 'update']);
     });
 
 });

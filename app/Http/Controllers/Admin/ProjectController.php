@@ -19,6 +19,7 @@ class ProjectController extends Controller
             'location'   => 'required|string',
             'start_date' => 'required|date',
             'status'     => 'required|boolean',
+            'budget'     => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -114,6 +115,7 @@ class ProjectController extends Controller
             'location'   => 'required|string',
             'start_date' => 'required|date',
             'status'     => 'required|boolean',
+            'budget'     => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
