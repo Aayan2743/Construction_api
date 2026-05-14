@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MaterialEntry;
 use App\Models\MaterialEntryHistory;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -15,6 +16,7 @@ class MaterialEntryController extends Controller
             'item_id' => 'required|exists:items,id',
             'qty' => 'required|numeric|min:0',
             'project_id' => 'required|exists:projects,id',
+            'entry_date' => 'nullable|date',
             'supplier' => 'nullable|string|max:255',
             'vendor_id' => 'required|exists:vendors,id',
         ]);
@@ -30,6 +32,7 @@ class MaterialEntryController extends Controller
             'item_id' => $request->item_id,
             'qty' => $request->qty,
             'project_id' => $request->project_id,
+            'entry_date' => $request->entry_date ?? now()->toDateString(),
             'supplier' => $request->supplier,
             'vendor_id' => $request->vendor_id,
             'added_by' => $request->user()->id,
@@ -107,6 +110,7 @@ class MaterialEntryController extends Controller
             'item_id' => 'required|exists:items,id',
             'qty' => 'required|numeric|min:0',
             'project_id' => 'required|exists:projects,id',
+            'entry_date' => 'nullable|date',
             'supplier' => 'nullable|string|max:255',
             'vendor_id' => 'required|exists:vendors,id',
             'remarks' => 'required|string|max:500',
@@ -119,18 +123,19 @@ class MaterialEntryController extends Controller
             ], 422);
         }
 
-        $before = $entry->only(['item_id', 'qty', 'project_id', 'supplier', 'vendor_id']);
+        $before = $entry->only(['item_id', 'qty', 'project_id', 'entry_date', 'supplier', 'vendor_id']);
 
         $entry->update([
             'item_id' => $request->item_id,
             'qty' => $request->qty,
             'project_id' => $request->project_id,
+            'entry_date' => $request->entry_date ?? $entry->entry_date ?? now()->toDateString(),
             'supplier' => $request->supplier,
             'vendor_id' => $request->vendor_id,
         ]);
 
         $entry->refresh();
-        $after = $entry->only(['item_id', 'qty', 'project_id', 'supplier', 'vendor_id']);
+        $after = $entry->only(['item_id', 'qty', 'project_id', 'entry_date', 'supplier', 'vendor_id']);
 
         $changes = [];
         foreach ($after as $key => $value) {
@@ -193,6 +198,45 @@ class MaterialEntryController extends Controller
             ->where('material_entry_id', $entry->id)
             ->latest()
             ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
+    // ✅ Distinct materials (items) used for a vendor (for dropdown after selecting vendor)
+    public function materialsByVendor(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vendor_id' => 'required|exists:vendors,id',
+            'search' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $vendorId = $request->vendor_id;
+        $search = $request->get('search');
+
+        $itemIds = MaterialEntry::where('added_by', $request->user()->id)
+            ->where('vendor_id', $vendorId)
+            ->distinct()
+            ->pluck('item_id');
+
+        $query = Item::query()
+            ->where('type', 'material')
+            ->whereIn('id', $itemIds);
+
+        if ($search) {
+            $query->where('name', 'LIKE', "%$search%");
+        }
+
+        $items = $query->orderBy('name')->get(['id', 'name']);
 
         return response()->json([
             'success' => true,

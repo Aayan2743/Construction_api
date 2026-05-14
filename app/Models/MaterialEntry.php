@@ -10,6 +10,7 @@ class MaterialEntry extends Model
         'item_id',
         'qty',
         'project_id',
+        'entry_date',
         'supplier',
         'vendor_id',
         'added_by',

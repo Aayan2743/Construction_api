@@ -50,4 +50,16 @@ class Labour extends Model
     {
         return $value ? asset('storage/' . $value) : null;
     }
+
+
+    public function attendance()
+{
+    return $this->hasOne(Attendance::class, 'labour_id');
+}
+
+
+public function works()
+{
+    return $this->hasMany(LabourWork::class, 'labour_id');
+}
 }

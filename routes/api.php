@@ -7,10 +7,18 @@ use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EquipmentEntryController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\labourdailyworkcontroller;
 use App\Http\Controllers\LabourReportController;
+use App\Http\Controllers\manageraccountcontroller;
+use App\Http\Controllers\ManagerDashboardController;
+use App\Http\Controllers\MaterialConsumptionController;
 use App\Http\Controllers\MaterialEntryController;
+use App\Http\Controllers\MaterialStockReportController;
 use App\Http\Controllers\mobile\LabourController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\stockreportcontroller;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -75,6 +83,8 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
 
     Route::get('/my-projects', [ProjectController::class, 'myProjects']);
     Route::get('/my-project/{id}', [ProjectController::class, 'myProject'])->name('my-project-by-id');
+    Route::get('/project-dashboard/{projectId}', [ManagerDashboardController::class, 'summary']);
+    Route::post('/project-dashboard/{projectId}/total-received', [ManagerDashboardController::class, 'setTotalReceived']);
 
     Route::prefix('labours')->group(function () {
 
@@ -95,6 +105,14 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::post('/reports', [LabourReportController::class, 'store']);
         Route::get('/reports', [LabourReportController::class, 'index']);
         Route::post('/update-reports/{id}', [LabourReportController::class, 'update']);
+
+        Route::post('add-work', [labourdailyworkcontroller::class, 'addWork']);
+        Route::post('update-work/{id}', [labourdailyworkcontroller::class, 'updateWork']);
+        Route::get('work-details/{id}', [labourdailyworkcontroller::class, 'workDetails']);
+
+        Route::get('work-list', [labourdailyworkcontroller::class, 'workList']);
+
+        Route::delete('delete-work/{id}', [labourdailyworkcontroller::class, 'deleteWork']);
 
     });
 
@@ -118,11 +136,54 @@ Route::prefix('manager')->middleware(['api', 'jwt.auth'])->group(function () {
 
     Route::prefix('material-entries')->group(function () {
         Route::get('/', [MaterialEntryController::class, 'index']);
+        Route::get('/materials-by-vendor', [MaterialEntryController::class, 'materialsByVendor']);
         Route::post('/add', [MaterialEntryController::class, 'store']);
         Route::get('/show/{id}', [MaterialEntryController::class, 'show']);
         Route::post('/update/{id}', [MaterialEntryController::class, 'update']);
         Route::delete('/delete/{id}', [MaterialEntryController::class, 'destroy']);
         Route::get('/{id}/history', [MaterialEntryController::class, 'history']);
     });
+
+    Route::prefix('stock')->group(function () {
+        Route::get('/material-report', [MaterialStockReportController::class, 'show']);
+        Route::post('/material-report', [MaterialStockReportController::class, 'update']);
+        Route::get('/material-consumptions', [MaterialConsumptionController::class, 'index']);
+        Route::post('/material-consumptions/add', [MaterialConsumptionController::class, 'store']);
+        Route::delete('/material-consumptions/delete/{id}', [MaterialConsumptionController::class, 'destroy']);
+    });
+
+      Route::prefix('stock-report')->group(function () {
+         Route::post('add-stock-report', [stockreportcontroller::class, 'addStockReport']);
+         Route::get('stock-report-list', [stockreportcontroller::class, 'stockReportList']);
+        //  Route::get('stock-report-details/{id}',stockreportcontroller::class, 'stockReportDetails']);
+         Route::get('stock-report-details/{id}',[StockReportController::class, 'stockReportDetails']);
+         Route::post( 'update-stock-report/{id}',[StockReportController::class, 'updateStockReport']);
+         Route::delete('delete-stock-report/{id}',[StockReportController::class, 'deleteStockReport']);
+      });
+
+         Route::prefix('manager-expenses')->group(function () {
+              Route::post('add-expense',[manageraccountcontroller::class, 'addExpense']);
+              Route::get( 'expense-list/{project_id}',[manageraccountcontroller::class, 'expenseList']);
+              Route::get( 'dashboard/{project_id}',[manageraccountcontroller::class, 'dashboard']);
+              Route::get('expense-details/{id}',[manageraccountcontroller::class, 'expenseDetails']);
+
+          });
+
+           Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'profile']);
+            Route::post('/update-image', [ProfileController::class, 'updateProfileImage']);
+            Route::post('/change-password', [ProfileController::class, 'changePassword']);
+        });
+
+
+
+
+    Route::prefix('expenses')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index']);
+        Route::get('/show/{id}', [ExpenseController::class, 'show']);
+        Route::post('/add', [ExpenseController::class, 'store']);
+    });
+
+
 
 });

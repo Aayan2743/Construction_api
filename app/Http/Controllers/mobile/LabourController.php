@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 class LabourController extends Controller
 {
      // ✅ List (only current user)
-   public function index(Request $request)
+   public function index_w(Request $request)
 {
     $search  = $request->get('search');
     $perPage = $request->get('per_page', 10);
@@ -47,6 +47,115 @@ class LabourController extends Controller
     ]);
 }
 
+public function index_w1(Request $request)
+{
+    $search  = $request->get('search');
+    $perPage = $request->get('per_page', 10);
+
+    $today = Carbon::today()->toDateString();
+
+    $query = Labour::with([
+            'vendor:id,name',
+            'attendance' => function ($q) use ($today) {
+                $q->where('date', $today);
+            }
+        ])
+        ->where('added_by', $request->user()->id);
+
+    // 🔍 Search
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('full_name', 'LIKE', "%{$search}%")
+              ->orWhere('phone', 'LIKE', "%{$search}%");
+        });
+    }
+
+    // 📄 Pagination
+    $labours = $query->latest()->paginate($perPage);
+
+    // 🔄 Format Response
+    $data = $labours->getCollection()->map(function ($labour) {
+
+        $labour->is_present = $labour->attendance ? 1 : 0;
+
+        return $labour;
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => $data,
+        'pagination' => [
+            'current_page' => $labours->currentPage(),
+            'last_page' => $labours->lastPage(),
+            'per_page' => $labours->perPage(),
+            'total' => $labours->total(),
+        ]
+    ]);
+}
+
+
+public function index(Request $request)
+{
+    $search     = $request->get('search');
+    $perPage    = $request->get('per_page', 10);
+    $attendance = $request->get('attendance'); // present / absent
+    $date       = $request->get('date', Carbon::today()->toDateString());
+
+    $query = Labour::with([
+            'vendor:id,name',
+            'attendance' => function ($q) use ($date) {
+                $q->where('date', $date);
+            }
+        ])
+        ->where('added_by', $request->user()->id);
+
+    // 🔍 Search
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('full_name', 'LIKE', "%{$search}%")
+              ->orWhere('phone', 'LIKE', "%{$search}%");
+        });
+    }
+
+    // ✅ Attendance Filter
+    if ($attendance == 'present') {
+
+        $query->whereHas('attendance', function ($q) use ($date) {
+            $q->where('date', $date)
+              ->where('is_present', 1);
+        });
+
+    } elseif ($attendance == 'absent') {
+
+        $query->whereDoesntHave('attendance', function ($q) use ($date) {
+            $q->where('date', $date)
+              ->where('is_present', 1);
+        });
+    }
+
+    // 📄 Pagination
+    $labours = $query->latest()->paginate($perPage);
+
+    // 🔄 Format Response
+    $data = $labours->getCollection()->map(function ($labour) {
+
+        $labour->is_present = $labour->attendance ? 1 : 0;
+
+        return $labour;
+    });
+
+    return response()->json([
+        'success' => true,
+        'selected_date' => $date,
+        'data' => $data,
+        'pagination' => [
+            'current_page' => $labours->currentPage(),
+            'last_page' => $labours->lastPage(),
+            'per_page' => $labours->perPage(),
+            'total' => $labours->total(),
+        ]
+    ]);
+}
     // ✅ Store
     public function store(Request $request)
     {
