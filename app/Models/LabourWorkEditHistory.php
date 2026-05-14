@@ -20,4 +20,12 @@ class LabourWorkEditHistory extends Model
     {
         return $this->belongsTo(LabourWork::class, 'labour_work_id');
     }
+
+    public function labourWork()
+{
+    return $this->belongsTo(
+        LabourWork::class,
+        'labour_work_id'
+    );
+}
 }

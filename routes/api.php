@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentEntryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ItemController;
@@ -75,7 +76,38 @@ Route::prefix('admin')->middleware(['api', 'jwt.auth'])->group(function () {
         Route::get('/get-allocations', [AccountController::class, 'index']);
         Route::delete('/delete-allocation/{id}', [AccountController::class, 'destroy']);
         Route::post('/update-allocations/{id}', [AccountController::class, 'update']);
+        Route::get('/manager-expense-details/{allocation_id}',[AccountController::class, 'managerExpenseDetails']);
     });
+
+
+      Route::prefix('operations')->group(function () {
+            Route::get('/labour-work-report',[LabourController::class, 'labourWorkReport']);
+            Route::get('/work-edit-history/{work_group_id}',[LabourController::class, 'workEditHistory']);
+           Route::get('/stock-history-report',[StockReportController::class, 'stockHistoryReport']);
+
+
+         Route::get('/material-entry-history',[StockReportController::class, 'materialEntryHistory']);
+
+         Route::get('/equipment-entry-history',[EquipmentEntryController::class, 'equipmentEntryHistory']);
+      });
+
+
+       Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'admin_profile']);
+            Route::post('update-admin-profile',[ProfileController::class, 'updateProfile']);
+
+       });
+
+         Route::prefix('dashboard')->group(function () {
+                 Route::get('/',[DashboardController::class, 'dashboard']);
+
+       });
+
+
+
+
+
+
 
 });
 

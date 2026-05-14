@@ -17,4 +17,15 @@ class LabourWork extends Model
 {
     return $this->hasMany(LabourWorkEditHistory::class);
 }
+
+
+
+
+public function deleteHistories()
+{
+    return $this->hasMany(
+        LabourWorkDeleteHistory::class,
+        'labour_work_id'
+    );
+}
 }

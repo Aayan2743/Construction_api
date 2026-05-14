@@ -134,4 +134,114 @@ class ProfileController extends Controller
 
     ]);
     }
+
+
+    public function admin_profile(Request $request)
+{
+$user = User::find($request->user()->id);
+
+
+return response()->json([
+
+    'success' => true,
+
+    'data' => [
+
+        'id' => $user->id,
+
+        'name' => $user->name,
+
+        'email' => $user->email,
+
+        'phone' => $user->phone,
+
+        'role' => ucfirst($user->role),
+
+        'status' => 'Active Account'
+
+    ]
+
+]);
+
+
+    }
+
+
+    public function updateProfile(Request $request)
+{
+$validator = Validator::make($request->all(), [
+
+    'name' => 'required|string|max:255',
+
+    'email' => 'required|email|unique:users,email,' . $request->user()->id,
+    'phone' => 'required|unique:users,phone,' . $request->user()->id,
+
+    'old_password' => 'nullable',
+
+    'new_password' => 'nullable|min:6'
+
+]);
+
+if ($validator->fails()) {
+
+    return response()->json([
+
+        'success' => false,
+
+        'message' => $validator->errors()->first()
+
+    ], 422);
+}
+
+$user = User::find($request->user()->id);
+
+// ✅ Check old password if changing password
+if ($request->filled('new_password')) {
+
+    if (!Hash::check(
+        $request->old_password,
+        $user->password
+    )) {
+
+        return response()->json([
+
+            'success' => false,
+
+            'message' => 'Old password incorrect'
+
+        ], 422);
+    }
+
+    $user->password = bcrypt(
+        $request->new_password
+    );
+}
+
+// ✅ Update Profile
+$user->update([
+
+    'name' => $request->name,
+
+    'email' => $request->email,
+
+    'phone' => $request->phone,
+
+]);
+
+$user->save();
+
+return response()->json([
+
+    'success' => true,
+
+    'message' => 'Profile updated successfully',
+
+    'data' => $user
+
+]);
+
+
+    }
+
+
 }

@@ -9,6 +9,7 @@ class StockReport extends Model
      protected $fillable = [
 
         'date',
+         'project_id',
         'item_id',
         'vendor_id',
         'opening_balance',
@@ -27,4 +28,28 @@ class StockReport extends Model
     {
         return $this->belongsTo(Vendor::class);
     }
+
+    public function editHistories()
+{
+    return $this->hasMany(
+        StockReportEditHistory::class,
+        'stock_report_id'
+    );
+}
+
+public function deleteHistories()
+{
+    return $this->hasMany(
+        StockReportDeleteHistory::class,
+        'stock_report_id'
+    );
+}
+
+public function manager()
+{
+    return $this->belongsTo(
+        User::class,
+        'added_by'
+    );
+}
 }

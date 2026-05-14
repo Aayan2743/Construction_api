@@ -31,4 +31,12 @@ class EquipmentEntry extends Model
     {
         return $this->hasMany(EquipmentEntryHistory::class, 'equipment_entry_id');
     }
+
+    public function manager()
+{
+    return $this->belongsTo(
+        User::class,
+        'added_by'
+    );
+}
 }

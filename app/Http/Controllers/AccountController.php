@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountAllocation;
+use App\Models\ProjectExpense;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -176,5 +177,130 @@ class AccountController extends Controller
             ],
         ]);
     }
+
+    public function managerExpenseDetails( $allocation_id,Request $request)
+    {
+        $date = $request->get('date');
+
+        $perPage = $request->get('per_page', 10);
+
+        // ✅ Allocation Details
+        $allocation = AccountAllocation::with([
+
+                'user:id,name,email',
+
+                'project:id,name'
+
+            ])
+
+            ->find($allocation_id);
+
+        if (!$allocation) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' => 'Allocation not found'
+
+            ], 404);
+        }
+
+        // ✅ Expense Query
+        $expenseQuery = ProjectExpense::where(
+
+                'project_id',
+                $allocation->project_id
+
+            )
+
+            ->where('added_by', $allocation->user_id);
+
+        // ✅ Date Filter
+        if ($date) {
+
+            $expenseQuery->whereDate('date', $date);
+        }
+
+        // ✅ Total Amount
+        $totalExpense = (clone $expenseQuery)
+
+            ->sum('amount');
+
+        // ✅ Paginated Expenses
+        $expenses = $expenseQuery
+
+            ->latest()
+
+            ->paginate($perPage);
+
+        // ✅ Format Data
+        $formatted = collect($expenses->items())
+
+            ->map(function ($expense) {
+
+                return [
+
+                    'id' => $expense->id,
+
+                    'date' => $expense->date,
+
+                    'project' => optional(
+                        $expense->project
+                    )->name,
+
+                    'type' => ucfirst(
+                        $expense->expense_type
+                    ),
+
+                    'amount' => $expense->amount
+
+                ];
+
+            });
+
+        return response()->json([
+
+            'success' => true,
+
+            'manager' => [
+
+                'id' => $allocation->user->id,
+
+                'name' => $allocation->user->name,
+
+                'email' => $allocation->user->email
+
+            ],
+
+            'project' => [
+
+                'id' => $allocation->project->id,
+
+                'name' => $allocation->project->name
+
+            ],
+
+            'entries_count' => $expenses->total(),
+
+            'total_expense' => $totalExpense,
+
+            'data' => $formatted,
+
+            'pagination' => [
+
+                'current_page' => $expenses->currentPage(),
+
+                'last_page' => $expenses->lastPage(),
+
+                'per_page' => $expenses->perPage(),
+
+                'total' => $expenses->total()
+
+            ]
+
+        ]);
+    }
+
 
 }

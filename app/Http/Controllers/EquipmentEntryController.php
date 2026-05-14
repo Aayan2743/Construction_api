@@ -101,7 +101,7 @@ public function show($id)
 public function update(Request $request, $id)
 {
     $entry = EquipmentEntry::where('id', $id)
-        ->where('added_by', $request->user()->id)
+         ->where('added_by', $request->user()->id)
         ->first();
 
     if (!$entry) {
@@ -220,4 +220,116 @@ public function destroy($id)
         'message' => 'Deleted successfully'
     ]);
 }
+
+
+
+public function equipmentEntryHistory(Request $request)
+{
+$projectId = $request->get('project_id');
+
+
+$date = $request->get('date');
+
+$query = EquipmentEntry::with([
+
+        'equipment:id,name',
+
+        'vendor:id,name',
+
+        'manager:id,name',
+
+        'histories'
+
+    ]);
+
+// ✅ Project Filter
+if ($projectId) {
+
+    $query->where('project_id', $projectId);
+}
+
+// ✅ Date Filter
+if ($date) {
+
+    $query->whereDate('entry_date', $date);
+}
+
+$entries = $query->latest()->get();
+
+$data = $entries->map(function ($entry, $index) {
+
+    return [
+
+        's_no' => $index + 1,
+
+        'id' => $entry->id,
+
+        'project_id' => $entry->project_id,
+
+        'date' => $entry->entry_date,
+
+        'manager' => [
+
+            'id' => optional(
+                $entry->manager
+            )->id,
+
+            'name' => optional(
+                $entry->manager
+            )->name
+
+        ],
+
+        'equipment' => optional(
+            $entry->equipment
+        )->name,
+
+        'vendor' => optional(
+            $entry->vendor
+        )->name,
+
+        'start_time' => $entry->start_time,
+
+        'close_time' => $entry->close_time,
+
+        'total_hours' => $entry->total_hours,
+
+        'work_details' => $entry->work_details,
+
+        // ✅ All Edit Histories
+        'edit_histories' => $entry->histories
+            ->map(function ($history) {
+
+                return [
+
+                    'id' => $history->id,
+
+                    'remarks' => $history->remarks,
+
+                    'changes' => $history->changes,
+
+                    'edited_by' => $history->user_id,
+
+                    'created_at' => $history->created_at
+                        ->format('d/m/Y h:i A')
+
+                ];
+
+            })
+
+    ];
+
+});
+
+return response()->json([
+
+    'success' => true,
+
+    'data' => $data
+
+]);
+
+
+}
+
 }

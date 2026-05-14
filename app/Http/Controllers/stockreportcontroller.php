@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MaterialEntry;
 use App\Models\StockReport;
 use App\Models\StockReportDeleteHistory;
 use App\Models\StockReportEditHistory;
@@ -16,10 +17,11 @@ class stockreportcontroller extends Controller
     $validator = Validator::make($request->all(), [
 
         'date'             => 'required|date',
+        'project_id' => 'required|exists:projects,id',
 
         'item_id'          => 'required|exists:items,id',
 
-        'vendor_id'        => 'nullable|exists:vendors,id',
+        'vendor_id'        => 'required|exists:vendors,id',
 
         'opening_balance'  => 'required|numeric',
 
@@ -53,6 +55,8 @@ class stockreportcontroller extends Controller
         'item_id' => $request->item_id,
 
         'vendor_id' => $request->vendor_id,
+
+        'project_id' => $request->project_id,
 
         'opening_balance' => $request->opening_balance,
 
@@ -253,8 +257,9 @@ class stockreportcontroller extends Controller
         'date' => 'required|date',
 
         'item_id' => 'required|exists:items,id',
+        'project_id' => 'required|exists:projects,id',
 
-        'vendor_id' => 'nullable|exists:vendors,id',
+        'vendor_id' => 'required|exists:vendors,id',
 
         'opening_balance' => 'required|numeric',
 
@@ -299,6 +304,8 @@ class stockreportcontroller extends Controller
 
         'stock_report_id' => $stock->id,
 
+
+
         'reason' => $request->reason,
 
         'old_opening_balance' => $stock->opening_balance,
@@ -326,6 +333,8 @@ class stockreportcontroller extends Controller
         'item_id' => $request->item_id,
 
         'vendor_id' => $request->vendor_id,
+
+        'project_id' => $request->project_id,
 
         'opening_balance' => $request->opening_balance,
 
@@ -407,5 +416,233 @@ class stockreportcontroller extends Controller
         'message' => 'Stock report deleted successfully'
 
     ]);
+    }
+
+   public function stockHistoryReport(Request $request)
+{
+$projectId = $request->get('project_id');
+
+$date = $request->get('date');
+
+$query = StockReport::with([
+
+        'item:id,name',
+
+        'vendor:id,name',
+
+        'manager:id,name',
+
+        'editHistories',
+
+        'deleteHistories'
+
+    ]);
+
+// ✅ Project Filter
+if ($projectId) {
+
+    $query->where('project_id', $projectId);
 }
+
+// ✅ Date Filter
+if ($date) {
+
+    $query->whereDate('date', $date);
+}
+
+$stocks = $query->latest()->get();
+
+$data = $stocks->map(function ($stock) {
+
+
+return [
+
+    'id' => $stock->id,
+
+    'project_id' => $stock->project_id,
+
+    'date' => $stock->date,
+
+    'manager' => [
+
+        'id' => optional(
+            $stock->manager
+        )->id,
+
+        'name' => optional(
+            $stock->manager
+        )->name
+
+    ],
+
+    'vendor' => optional(
+        $stock->vendor
+    )->name,
+
+    'item_name' => optional(
+        $stock->item
+    )->name,
+
+    'opening_balance' => $stock->opening_balance,
+
+    'received' => $stock->received,
+
+    'used' => $stock->used,
+
+    'balance' => $stock->balance,
+
+    // ✅ All Edit Histories
+    'edit_histories' => $stock->editHistories
+        ->map(function ($history) {
+
+            return [
+
+                'id' => $history->id,
+
+                'reason' => $history->reason,
+
+                'edited_by' => $history->edited_by,
+
+                'created_at' => $history->created_at
+                    ->format('d/m/Y h:i A')
+
+            ];
+
+        }),
+
+    // ✅ All Delete Histories
+    'delete_histories' => $stock->deleteHistories
+        ->map(function ($history) {
+
+            return [
+
+                'id' => $history->id,
+
+                'remarks' => $history->remarks,
+
+                'deleted_by' => $history->deleted_by,
+
+                'created_at' => $history->created_at
+                    ->format('d/m/Y h:i A')
+
+            ];
+
+        })
+
+];
+
+
+});
+
+
+return response()->json([
+
+    'success' => true,
+
+    'data' => $data
+
+]);
+
+
+    }
+
+
+   public function materialEntryHistory(Request $request)
+{
+$projectId = $request->get('project_id');
+
+
+$date = $request->get('date');
+
+$query = MaterialEntry::with([
+
+        'item:id,name',
+
+        'vendor:id,name',
+
+        'manager:id,name',
+
+        'histories'
+
+    ]);
+
+// ✅ Project Filter
+if ($projectId) {
+
+    $query->where('project_id', $projectId);
+}
+
+// ✅ Date Filter
+if ($date) {
+
+    $query->whereDate('entry_date', $date);
+}
+
+$entries = $query->latest()->get();
+
+$data = $entries->map(function ($entry, $index) {
+
+    // ✅ Latest Edit History
+    $latestHistory = $entry->histories->last();
+
+    return [
+
+        's_no' => $index + 1,
+
+        'id' => $entry->id,
+
+        'project_id' => $entry->project_id,
+
+        'date' => $entry->entry_date,
+
+        'manager' => [
+
+            'id' => optional(
+                $entry->manager
+            )->id,
+
+            'name' => optional(
+                $entry->manager
+            )->name
+
+        ],
+
+        'vendor' => optional(
+            $entry->vendor
+        )->name,
+
+        'item_name' => optional(
+            $entry->item
+        )->name,
+
+        'quantity' => $entry->qty,
+
+        'edit_reason' => optional(
+            $latestHistory
+        )->remarks,
+
+        'changes' => optional(
+            $latestHistory
+        )->changes
+
+    ];
+
+});
+
+return response()->json([
+
+    'success' => true,
+
+    'data' => $data
+
+]);
+
+
+    }
+
+
+
+
+
+
 }

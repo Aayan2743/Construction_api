@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\LabourHistory;
 use App\Models\Labour;
 use App\Models\LabourWage;
+use App\Models\LabourWork;
+use App\Models\LabourWorkEditHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
@@ -47,51 +49,7 @@ class LabourController extends Controller
     ]);
 }
 
-public function index_w1(Request $request)
-{
-    $search  = $request->get('search');
-    $perPage = $request->get('per_page', 10);
 
-    $today = Carbon::today()->toDateString();
-
-    $query = Labour::with([
-            'vendor:id,name',
-            'attendance' => function ($q) use ($today) {
-                $q->where('date', $today);
-            }
-        ])
-        ->where('added_by', $request->user()->id);
-
-    // 🔍 Search
-    if ($search) {
-        $query->where(function ($q) use ($search) {
-            $q->where('full_name', 'LIKE', "%{$search}%")
-              ->orWhere('phone', 'LIKE', "%{$search}%");
-        });
-    }
-
-    // 📄 Pagination
-    $labours = $query->latest()->paginate($perPage);
-
-    // 🔄 Format Response
-    $data = $labours->getCollection()->map(function ($labour) {
-
-        $labour->is_present = $labour->attendance ? 1 : 0;
-
-        return $labour;
-    });
-
-    return response()->json([
-        'success' => true,
-        'data' => $data,
-        'pagination' => [
-            'current_page' => $labours->currentPage(),
-            'last_page' => $labours->lastPage(),
-            'per_page' => $labours->perPage(),
-            'total' => $labours->total(),
-        ]
-    ]);
-}
 
 
 public function index(Request $request)
@@ -540,4 +498,203 @@ public function index(Request $request)
             ],
         ]);
     }
+
+
+
+
+    public function labourWorkReport(Request $request)
+{
+$projectId = $request->get('project_id');
+
+
+$date = $request->get('date');
+
+$query = LabourWork::with([
+
+        'labour:id,full_name,gender,vendor_id',
+
+        'labour.vendor:id,name',
+
+        'editHistories',
+
+        'deleteHistories'
+
+    ])
+
+    ->where('added_by', $request->user()->id);
+
+// ✅ Project Filter
+if ($projectId) {
+
+    $query->where('project_id', $projectId);
+}
+
+// ✅ Date Filter
+if ($date) {
+
+    $query->whereDate('date', $date);
+}
+
+$works = $query->get()
+
+    ->groupBy('work_group_id')
+
+    ->map(function ($group) {
+
+        $first = $group->first();
+
+        $maleCount = $group
+
+            ->filter(function ($item) {
+
+                return strtolower(
+                    optional($item->labour)->gender
+                ) == 'male';
+
+            })
+
+            ->count();
+
+        $femaleCount = $group
+
+            ->filter(function ($item) {
+
+                return strtolower(
+                    optional($item->labour)->gender
+                ) == 'female';
+
+            })
+
+            ->count();
+
+        $editReason = optional(
+            $first->editHistories->last()
+        )->reason;
+
+        $deleteReason = optional(
+            $first->deleteHistories->last()
+        )->remarks;
+
+        return [
+
+            'work_group_id' => $first->work_group_id,
+
+            'project_id' => $first->project_id,
+
+            'date' => $first->date,
+
+            'party' => optional(
+                optional($first->labour)->vendor
+            )->name,
+
+            'male_count' => $maleCount,
+
+            'female_count' => $femaleCount,
+
+            'work_done' => $first->work_done,
+
+            'measurement' => $first->measurement,
+
+            'edit_reason' => $editReason,
+
+            'delete_reason' => $deleteReason
+
+        ];
+
+    })
+
+    ->values();
+
+return response()->json([
+
+    'success' => true,
+
+    'data' => $works
+
+]);
+
+
+}
+
+
+
+    public function workEditHistory($work_group_id, Request $request)
+    {
+    // ✅ Get Work IDs from Group
+    $workIds = LabourWork::where(
+
+
+            'work_group_id',
+            $work_group_id
+
+        )
+
+        ->pluck('id');
+
+    // ✅ Edit Histories
+    $histories = LabourWorkEditHistory::with([
+
+            'labourWork.labour:id,full_name'
+
+        ])
+
+        ->whereIn('labour_work_id', $workIds)
+
+        ->latest()
+
+        ->get();
+
+    if ($histories->isEmpty()) {
+
+        return response()->json([
+
+            'success' => false,
+
+            'message' => 'No edit history found'
+
+        ], 404);
+    }
+
+    $data = $histories->map(function ($history) {
+
+        return [
+
+            'id' => $history->id,
+
+            'reason' => $history->reason,
+
+            'old_work_done' => $history->old_work_done,
+
+            'old_measurement' => $history->old_measurement,
+
+            'old_date' => $history->old_date,
+
+            'labour_name' => optional(
+                optional($history->labourWork)->labour
+            )->full_name,
+
+            'edited_by' => $history->edited_by,
+
+            'edited_at' => $history->created_at
+                ->format('d/m/Y h:i A')
+
+        ];
+
+    });
+
+    return response()->json([
+
+        'success' => true,
+
+        'data' => $data
+
+    ]);
+
+
+    }
+
+
+
+
+
 }

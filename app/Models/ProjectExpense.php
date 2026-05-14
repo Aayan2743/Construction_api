@@ -30,4 +30,12 @@ class ProjectExpense extends Model
             'party_id'
         );
     }
+
+    public function project()
+{
+    return $this->belongsTo(
+        Project::class,
+        'project_id'
+    );
+}
 }

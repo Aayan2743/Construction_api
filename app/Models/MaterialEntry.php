@@ -35,5 +35,19 @@ class MaterialEntry extends Model
     {
         return $this->hasMany(MaterialEntryHistory::class);
     }
+
+
+public function manager()
+{
+    return $this->belongsTo(
+        User::class,
+        'added_by'
+    );
+}
+
+
+
+
+
 }
 

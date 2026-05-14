@@ -20,6 +20,7 @@ public function addWork(Request $request)
     $validator = Validator::make($request->all(), [
 
         'labour_ids'   => 'required|array',
+         'project_id'   => 'required|exists:projects,id',
 
         'labour_ids.*' => 'exists:labours,id',
 
@@ -58,6 +59,7 @@ public function addWork(Request $request)
             'work_done'     => $request->work_done,
 
             'measurement'   => $request->measurement,
+              'project_id'    => $request->project_id,
 
             'added_by'      => $request->user()->id
         ]);
@@ -81,6 +83,7 @@ public function updateWork(Request $request, $work_group_id)
         'labour_ids'         => 'required|array',
 
         'labour_ids.*'       => 'exists:labours,id',
+        'project_id' => 'required|exists:projects,id',
 
         'date'               => 'required|date',
 
@@ -128,6 +131,8 @@ public function updateWork(Request $request, $work_group_id)
 
             'labour_work_id' => $item->id,
 
+            //  'project_id'  => $request->project_id,
+
             'reason'         => $request->reason_for_editing,
 
             'old_work_done'  => $item->work_done,
@@ -153,6 +158,8 @@ public function updateWork(Request $request, $work_group_id)
         ->update([
 
             'date'        => $request->date,
+
+             'project_id'  => $request->project_id,
 
             'work_done'   => $request->work_done,
 
